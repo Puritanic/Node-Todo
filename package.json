@@ -1,0 +1,15 @@
+{
+  "name": "node-todo",
+  "version": "0.0.1",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "Darko Tasevski <darktasevski@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "mongodb": "^3.1.1"
+  }
+}
