@@ -7,20 +7,10 @@ const { app } = require('../server');
 const Todo = require('../models/todo');
 const User = require('../models/user');
 
-const todos = [
-	{ text: '1st Test Todo Text', _id: new ObjectID() },
-	{ text: '2nd Test Todo Text', _id: new ObjectID() },
-	{ text: '3rd Test Todo Text', _id: new ObjectID() },
-];
+const { todos, populateTodos, users, populateUsers } = require('./fixtures');
 
-beforeEach(done => {
-	// Wipe all todos
-	Todo.remove({})
-		.then(() => {
-			return Todo.insertMany(todos);
-		})
-		.then(() => done());
-});
+beforeEach(populateUsers);
+beforeEach(populateTodos);
 
 describe('POST /todos', () => {
 	it('should create a new todo', done => {
@@ -140,6 +130,62 @@ describe('PATCH /todos/:id', () => {
 				expect(res.body.todo.text).toBe(text);
 				expect(res.body.todo.completed).toBe(false);
 				expect(res.body.todo.completedAt).toBeFalsy();
+			})
+			.end(done);
+	});
+});
+
+describe('GET /users/me', () => {
+	it('should return user if authenticated', done => {
+		request(app)
+			.get('/users/me')
+			.set('X-Auth', users[0].tokens[0].token)
+			.expect(res => {
+				expect(res.body._id).toBe(users[0]._id.toHexString());
+			})
+			.end(done);
+	});
+
+	it('should return 401 if not authenticated', done => {
+		request(app)
+			.get('/users/me')
+			.set('X-Auth', '')
+			.expect(401)
+			.end(done);
+	});
+});
+
+describe('POST /users', () => {
+	it('should create a user', done => {
+		const data = {
+			email: 'test@mail.com',
+			password: '$pass$!!',
+		};
+
+		request(app)
+			.post('/users/')
+			.send(data)
+			.expect(200)
+			.expect(res => {
+				expect(res.headers['x-auth']).toBeTruthy();
+				expect(res.body._id).toBeTruthy();
+				expect(res.body.email).toBe(data.email);
+			})
+			.end(done);
+	});
+
+	it('should return validation errors if request is invalid', done => {
+		const data = {
+			email: 'test@mail.com',
+			password: '',
+		};
+
+		request(app)
+			.post('/users/')
+			.send(data)
+			.expect(400)
+			.expect(res => {
+				expect(res.body.errors).toBeTruthy();
 			})
 			.end(done);
 	});
