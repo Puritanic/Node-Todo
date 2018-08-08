@@ -3,6 +3,8 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const { ObjectID } = require('mongodb');
 const _ = require('lodash');
+const bcrypt = require('bcryptjs');
+var morgan = require('morgan');
 
 const { mongoose } = require('./db/mongoose');
 const Todo = require('./models/todo');
@@ -13,6 +15,7 @@ const PORT = process.env.PORT || 3000;
 const app = express();
 
 app.use(bodyParser.json());
+app.use(morgan('combined'));
 
 app.get('/todos', (req, res) => {
 	Todo.find()
@@ -102,6 +105,18 @@ app.post('/users', (req, res) => {
 		})
 		.then(token => {
 			res.header('X-Auth', token).send(user);
+		})
+		.catch(err => res.status(400).json(err));
+});
+
+app.post('/users/login', (req, res) => {
+	// const { email, password } = req.body;
+	const body = _.pick(req.body, ['email', 'password']);
+
+	return User.findByCredentials(body.email, body.password)
+		.then(user => {
+			if (!user) return res.status(404).json({ message: 'User not found' });
+			return user.generateAuthToken().then(token => res.header('X-Auth', token).json(user));
 		})
 		.catch(err => res.status(400).json(err));
 });
