@@ -190,3 +190,40 @@ describe('POST /users', () => {
 			.end(done);
 	});
 });
+
+describe('POST /users/login', () => {
+	it('should login user and return auth token', done => {
+		const data = {
+			email: 'test@mail.com',
+			password: '$pass$!!',
+		};
+
+		request(app)
+			.post('/users/')
+			.send(data)
+			.expect(200)
+			.end(() =>
+				request(app)
+					.post('/users/login')
+					.send(data)
+					.expect(200)
+					.expect(res => {
+						expect(res.headers['x-auth']).toBeTruthy();
+						expect(res.body._id).toBeTruthy();
+						expect(res.body.email).toBe(data.email);
+					})
+					.end(done)
+			);
+	});
+
+	it('should reject invalid login', done => {
+		request(app)
+			.post('/users/login')
+			.send({ email: users[0].email, password: 'wrong-password' })
+			.expect(400)
+			.expect(res => {
+				expect(res.headers['x-auth']).toBeFalsy();
+			})
+			.end(done);
+	});
+});
