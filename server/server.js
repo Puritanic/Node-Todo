@@ -17,21 +17,29 @@ const app = express();
 app.use(bodyParser.json());
 app.use(morgan('combined'));
 
-app.get('/todos', (req, res) => {
-	Todo.find()
+app.get('/todos', authenticate, (req, res) => {
+	Todo.find({ _author: req.user._id })
 		.then(todos => res.json({ todos }))
 		.catch(err => res.status(400).send(err));
 });
 
-app.get('/todos/:todo_id', (req, res) => {
-	return Todo.findById(req.params.todo_id)
-		.then(todo => res.json({ todo }))
-		.catch(err => res.status(400).json(err));
+app.get('/todos/:todo_id', authenticate, (req, res) => {
+	return Todo.findOne({
+		_id: req.params.todo_id,
+		_author: req.user._id,
+	})
+		.then(todo => {
+			if (!todo) return Promise.reject();
+
+			return res.json({ todo });
+		})
+		.catch(err => res.status(404).json(err));
 });
 
-app.post('/todos', (req, res) => {
+app.post('/todos', authenticate, (req, res) => {
 	const todo = new Todo({
 		text: req.body.text,
+		_author: req.user._id,
 	});
 
 	todo.save()
@@ -41,12 +49,15 @@ app.post('/todos', (req, res) => {
 		.catch(err => res.status(400).send(err));
 });
 
-app.delete('/todos/:todo_id', (req, res) => {
+app.delete('/todos/:todo_id', authenticate, (req, res) => {
 	const id = req.params.todo_id;
 
 	if (!ObjectID.isValid(id)) return res.status(404).send();
 
-	return Todo.findByIdAndDelete(id)
+	return Todo.findOneAndRemove({
+		_id: id,
+		_author: req.user._id,
+	})
 		.then(response => {
 			if (!response) return res.status(404).send();
 
@@ -55,7 +66,7 @@ app.delete('/todos/:todo_id', (req, res) => {
 		.catch(err => res.status(400).json(err));
 });
 
-app.patch('/todos/:id', (req, res) => {
+app.patch('/todos/:id', authenticate, (req, res) => {
 	var id = req.params.id;
 	var body = _.pick(req.body, ['text', 'completed']);
 
@@ -70,13 +81,18 @@ app.patch('/todos/:id', (req, res) => {
 		body.completedAt = null;
 	}
 
-	Todo.findByIdAndUpdate(id, { $set: body }, { new: true })
+	Todo.findOneAndUpdate(
+		{
+			_id: id,
+			_author: req.user._id,
+		},
+		{ $set: body },
+		{ new: true }
+	)
 		.then(todo => {
-			if (!todo) {
-				return res.status(404).send();
-			}
+			if (!todo) return res.status(404).send();
 
-			res.send({ todo });
+			return res.send({ todo });
 		})
 		.catch(e => {
 			res.status(400).send();
