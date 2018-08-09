@@ -85,6 +85,16 @@ UserSchema.statics.findByCredentials = function(email, password) {
 	});
 };
 
+UserSchema.methods.removeToken = function(token) {
+	const user = this;
+	// $pull removes item that match criteria from the document
+	return user.update({
+		$pull: {
+			tokens: { token },
+		},
+	});
+};
+
 UserSchema.pre('save', function(next) {
 	const user = this;
 
